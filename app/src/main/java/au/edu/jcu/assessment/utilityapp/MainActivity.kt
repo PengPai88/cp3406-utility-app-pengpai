@@ -13,9 +13,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -57,10 +62,16 @@ fun UtilityAppPreview() {
 @Composable
 fun UtilityApp() {
     var selectedTab by remember { mutableStateOf("Utility") }
-    // 单位状态提升到这里，UtilityScreen 和 SettingsScreen 共享
     var isCelsius by remember { mutableStateOf(true) }
 
     Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(if (selectedTab == "Utility") "Weather" else "Settings")
+                }
+            )
+        },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
@@ -92,12 +103,18 @@ fun UtilityApp() {
 
 @Composable
 fun UtilityScreen(isCelsius: Boolean) {
-    // 硬编码数据，Week 5 会换成 Retrofit 从 Open-Meteo 拉的真实数据
+    // 硬编码数据，Week 5 换成 Retrofit 真实数据
     val tempC = 24.5
     val highC = 31.0
     val lowC = 26.0
+    val forecast = listOf(
+        "Now" to 24.5,
+        "15:00" to 26.0,
+        "16:00" to 27.0,
+        "17:00" to 26.5,
+        "18:00" to 25.0
+    )
 
-    // 根据单位换算
     val displayTemp = if (isCelsius) tempC else tempC * 9 / 5 + 32
     val displayHigh = if (isCelsius) highC else highC * 9 / 5 + 32
     val displayLow = if (isCelsius) lowC else lowC * 9 / 5 + 32
@@ -110,18 +127,50 @@ fun UtilityScreen(isCelsius: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Singapore", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            "%.1f%s".format(displayTemp, unit),
-            style = MaterialTheme.typography.displayLarge
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Partly cloudy", style = MaterialTheme.typography.bodyLarge)
+        // 主天气卡片
+        Card(
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Singapore", style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "%.1f%s".format(displayTemp, unit),
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Partly cloudy", style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Text("H: %.0f%s".format(displayHigh, unit))
+                    Text("L: %.0f%s".format(displayLow, unit))
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Text("H: %.0f%s".format(displayHigh, unit))
-            Text("L: %.0f%s".format(displayLow, unit))
+
+        // 未来几小时横向滚动预报
+        Text("Next hours", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(forecast) { (time, temp) ->
+                Card {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(time, style = MaterialTheme.typography.labelMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val t = if (isCelsius) temp else temp * 9 / 5 + 32
+                        Text("%.0f%s".format(t, unit), style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+            }
         }
     }
 }
@@ -146,7 +195,9 @@ fun SettingsScreen(
             Text(if (isCelsius) "Celsius (°C)" else "Fahrenheit (°F)")
             Switch(
                 checked = isCelsius,
-                onCheckedChange = onUnitChange
+                onCheckedChange = onUnitChange,
+                // 无障碍：给屏幕阅读器说明这个开关干嘛
+                contentDescription = "Toggle temperature unit"
             )
         }
     }
