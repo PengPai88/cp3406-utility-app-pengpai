@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,9 +66,15 @@ fun UtilityAppPreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UtilityApp() {
+fun UtilityApp(
+    viewModel: WeatherViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { WeatherViewModel(WeatherRepository()) }
+        }
+    )
+) {
     var selectedTab by remember { mutableStateOf("Utility") }
-    var isCelsius by remember { mutableStateOf(true) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -93,10 +103,10 @@ fun UtilityApp() {
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                "Utility" -> UtilityScreen(isCelsius = isCelsius)
+                "Utility" -> UtilityScreen(uiState = uiState)
                 "Settings" -> SettingsScreen(
-                    isCelsius = isCelsius,
-                    onUnitChange = { isCelsius = it }
+                    isCelsius = uiState.isCelsius,
+                    onUnitChange = { viewModel.toggleUnit() }
                 )
             }
         }
@@ -104,23 +114,11 @@ fun UtilityApp() {
 }
 
 @Composable
-fun UtilityScreen(isCelsius: Boolean) {
-    // 硬编码数据，Week 5 换成 Retrofit 真实数据
-    val tempC = 24.5
-    val highC = 31.0
-    val lowC = 26.0
-    val forecast = listOf(
-        "Now" to 24.5,
-        "15:00" to 26.0,
-        "16:00" to 27.0,
-        "17:00" to 26.5,
-        "18:00" to 25.0
-    )
-
-    val displayTemp = if (isCelsius) tempC else tempC * 9 / 5 + 32
-    val displayHigh = if (isCelsius) highC else highC * 9 / 5 + 32
-    val displayLow = if (isCelsius) lowC else lowC * 9 / 5 + 32
-    val unit = if (isCelsius) "°C" else "°F"
+fun UtilityScreen(uiState: WeatherUiState) {
+    val unit = if (uiState.isCelsius) "°C" else "°F"
+    val displayTemp = if (uiState.isCelsius) uiState.tempC else uiState.tempC * 9 / 5 + 32
+    val displayHigh = if (uiState.isCelsius) uiState.highC else uiState.highC * 9 / 5 + 32
+    val displayLow = if (uiState.isCelsius) uiState.lowC else uiState.lowC * 9 / 5 + 32
 
     Column(
         modifier = Modifier
@@ -129,7 +127,6 @@ fun UtilityScreen(isCelsius: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 主天气卡片
         Card(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             modifier = Modifier.fillMaxWidth()
@@ -138,14 +135,14 @@ fun UtilityScreen(isCelsius: Boolean) {
                 modifier = Modifier.padding(24.dp).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Singapore", style = MaterialTheme.typography.headlineMedium)
+                Text(uiState.city, style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     "%.1f%s".format(displayTemp, unit),
                     style = MaterialTheme.typography.displayLarge
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Partly cloudy", style = MaterialTheme.typography.bodyLarge)
+                Text(uiState.description, style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     Text("H: %.0f%s".format(displayHigh, unit))
@@ -155,20 +152,18 @@ fun UtilityScreen(isCelsius: Boolean) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-
-        // 未来几小时横向滚动预报
         Text("Next hours", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(12.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(forecast) { (time, temp) ->
+            items(uiState.forecast) { item ->
                 Card {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(time, style = MaterialTheme.typography.labelMedium)
+                        Text(item.time, style = MaterialTheme.typography.labelMedium)
                         Spacer(modifier = Modifier.height(4.dp))
-                        val t = if (isCelsius) temp else temp * 9 / 5 + 32
+                        val t = if (uiState.isCelsius) item.tempC else item.tempC * 9 / 5 + 32
                         Text("%.0f%s".format(t, unit), style = MaterialTheme.typography.titleLarge)
                     }
                 }
@@ -180,7 +175,7 @@ fun UtilityScreen(isCelsius: Boolean) {
 @Composable
 fun SettingsScreen(
     isCelsius: Boolean,
-    onUnitChange: (Boolean) -> Unit
+    onUnitChange: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -197,7 +192,7 @@ fun SettingsScreen(
             Text(if (isCelsius) "Celsius (°C)" else "Fahrenheit (°F)")
             Switch(
                 checked = isCelsius,
-                onCheckedChange = onUnitChange
+                onCheckedChange = { onUnitChange() }
             )
         }
     }
