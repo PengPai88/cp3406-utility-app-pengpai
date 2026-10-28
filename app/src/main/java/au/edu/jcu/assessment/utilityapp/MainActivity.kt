@@ -62,6 +62,7 @@ fun UtilityAppPreview() {
     MobileTech_UtilityAppTheme {
         UtilityApp()
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
