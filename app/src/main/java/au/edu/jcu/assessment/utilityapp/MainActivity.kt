@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -59,6 +60,7 @@ fun UtilityAppPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UtilityApp() {
     var selectedTab by remember { mutableStateOf("Utility") }
@@ -195,9 +197,7 @@ fun SettingsScreen(
             Text(if (isCelsius) "Celsius (°C)" else "Fahrenheit (°F)")
             Switch(
                 checked = isCelsius,
-                onCheckedChange = onUnitChange,
-                // 无障碍：给屏幕阅读器说明这个开关干嘛
-                contentDescription = "Toggle temperature unit"
+                onCheckedChange = onUnitChange
             )
         }
     }
