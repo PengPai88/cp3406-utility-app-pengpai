@@ -21,9 +21,15 @@ class WeatherViewModel(
 
     fun loadWeather() {
         viewModelScope.launch {
-            // Week 5: 这里会变成 repository.fetchWeather() 网络请求
-            val data = repository.getCurrentWeather()
-            _uiState.value = data
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            try {
+                val data = repository.fetchWeather()
+                _uiState.value = data
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "Failed to load weather: ${e.message}")
+                }
+            }
         }
     }
 
