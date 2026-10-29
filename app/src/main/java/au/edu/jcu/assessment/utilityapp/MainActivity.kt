@@ -22,9 +22,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +64,6 @@ fun UtilityAppPreview() {
     MobileTech_UtilityAppTheme {
         UtilityApp()
     }
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,7 +105,10 @@ fun UtilityApp(
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
-                "Utility" -> UtilityScreen(uiState = uiState)
+                "Utility" -> UtilityScreen(
+                    uiState = uiState,
+                    onRetry = { viewModel.loadWeather() }
+                )
                 "Settings" -> SettingsScreen(
                     isCelsius = uiState.isCelsius,
                     onUnitChange = { viewModel.toggleUnit() }
@@ -115,7 +119,40 @@ fun UtilityApp(
 }
 
 @Composable
-fun UtilityScreen(uiState: WeatherUiState) {
+fun UtilityScreen(uiState: WeatherUiState, onRetry: () -> Unit) {
+    // 加载中
+    if (uiState.isLoading) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Loading weather...")
+        }
+        return
+    }
+
+    // 错误
+    if (uiState.errorMessage != null) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                uiState.errorMessage,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) { Text("Retry") }
+        }
+        return
+    }
+
+    // 成功
     val unit = if (uiState.isCelsius) "°C" else "°F"
     val displayTemp = if (uiState.isCelsius) uiState.tempC else uiState.tempC * 9 / 5 + 32
     val displayHigh = if (uiState.isCelsius) uiState.highC else uiState.highC * 9 / 5 + 32
